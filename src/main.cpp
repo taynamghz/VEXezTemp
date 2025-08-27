@@ -272,17 +272,29 @@ void opcontrol() {
     // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
     // . . .
     
-    // Trigger the selected autonomous routine
+   // === AUTON TRIGGER ON BUTTON B ===
     if (master.get_digital(DIGITAL_B)) {
-       chassis.pid_targets_reset();                // Resets PID targets to 0
-  chassis.drive_imu_reset();                  // Reset gyro position to 0
-  chassis.drive_sensor_reset();               // Reset drive sensors to 0
-  //here read from GPS to localize cooordinates
-  chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
-  chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
-     drive_example();
+      chassis.pid_targets_reset();                 // Reset PID targets
+      chassis.drive_imu_reset();                   // Reset gyro
+      chassis.drive_sensor_reset();                // Reset drive encoders
+      chassis.odom_xyt_set(0_in, 0_in, 0_deg);     // Reset odom starting position
+      chassis.drive_brake_set(MOTOR_BRAKE_HOLD);   // Hold for consistency
+      drive_example();                             // Run auton routine
+    }
+
+    // === PID TUNER TOGGLE ON BUTTON X ===
+    if (master.get_digital_new_press(DIGITAL_X)) {
+      chassis.pid_tuner_toggle();
+    }
+
+    // Keep PID tuner running if enabled
+    chassis.pid_tuner_iterate();
+
+    // If comp switch is connected, auto-disable tuner
+    if (chassis.pid_tuner_enabled() && pros::competition::is_connected()) {
+      chassis.pid_tuner_disable();
     }
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
-  }
+  
 }
