@@ -60,6 +60,11 @@
 // using namespace okapi;
 // using namespace ez;
 using namespace okapi::literals;
+extern pros::Gps gps; 
+
+// Tracking wheels
+extern ez::tracking_wheel vert_tracker;
+extern ez::tracking_wheel horiz_tracker;
 
 /**
  * Prototypes for the competition control tasks are redefined here to ensure

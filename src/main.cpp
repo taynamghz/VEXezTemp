@@ -1,20 +1,34 @@
 #include "main.h"
+#include "subsystems.hpp"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
 // https://ez-robotics.github.io/EZ-Template/
 /////
+pros::Gps gps(3, 0, 0); // Port 1, no offset
+
 
 // Chassis constructor
 ez::Drive chassis(
-    // These are your drive motors, the first motor is used for sensing!
-    {-5, -6, -7, -8},  // Left Chassis Ports (negative port will reverse it!)
-    {11, 15, 16, 17},  // Right Chassis Ports (negative port will reverse it!)
+    {-1, -11},  // Left Chassis Ports
+    {20, 10},  // Right Chassis Ports
+    15,                 // IMU Port
+    3.25,               // Wheel Diameter
+    360.0,
+    1.667
+);
 
-    21,      // IMU Port
-    4.125,   // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
-    420.0);  // Wheel RPM = cartridge * (motor gear / wheel gear)
+// Horizontal tracking wheel (perpendicular)
+ez::tracking_wheel horiz_tracker('A', 2.75, 0.0, 1.0);  // 'A' = ADI port, wheel diameter, distance to center, gear ratio
 
+// Vertical tracking wheel (parallel)
+ez::tracking_wheel vert_tracker('H', 2.75, 0.0, 1.0);  // 'B' = ADI port
+// Assign odometry trackers
+void setup_chassis_odom() {
+    chassis.odom_tracker_left = &vert_tracker;
+    chassis.odom_tracker_back = &horiz_tracker;
+    chassis.odom_tracker_left_set(&vert_tracker);
+    chassis.odom_tracker_back_set(&horiz_tracker);}
 // Uncomment the trackers you're using here!
 // - `8` and `9` are smart ports (making these negative will reverse the sensor)
 //  - you should get positive values on the encoders going FORWARD and RIGHT
@@ -46,7 +60,7 @@ void initialize() {
 
   // Configure your chassis controls
   chassis.opcontrol_curve_buttons_toggle(true);   // Enables modifying the controller curve with buttons on the joysticks
-  chassis.opcontrol_drive_activebrake_set(0.0);   // Sets the active brake kP. We recommend ~2.  0 will disable.
+  chassis.opcontrol_drive_activebrake_set(0);   // Sets the active brake kP. We recommend ~2.  0 will disable.
   chassis.opcontrol_curve_default_set(0.0, 0.0);  // Defaults for curve. If using tank, only the first parameter is used. (Comment this line out if you have an SD card!)
 
   // Set the drive to your own constants from autons.cpp!
@@ -56,28 +70,33 @@ void initialize() {
   // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
   // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
 
-  // Autonomous Selector using LLEMU
-  ez::as::auton_selector.autons_add({
-      {"Drive\n\nDrive forward and come back", drive_example},
-      {"Turn\n\nTurn 3 times.", turn_example},
-      {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
-      {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
-      {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
-      {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
-      {"Combine all 3 movements", combining_movements},
-      {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
-      {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
-      {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
-      {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
-      {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
-      {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
-      {"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
-  });
+  // // Autonomous Selector using LLEMU
+  // ez::as::auton_selector.autons_add({
+  //     {"Drive\n\nDrive forward and come back", drive_example},
+  //     {"Turn\n\nTurn 3 times.", turn_example},
+  //     {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
+  //     {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
+  //     {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
+  //     {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
+  //     {"Combine all 3 movements", combining_movements},
+  //     {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
+  //     {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
+  //     {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
+  //     {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
+  //     {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
+  //     {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
+  //     {"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
+  // });
 
   // Initialize chassis and auton selector
   chassis.initialize();
   ez::as::initialize();
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
+  vert_tracker.reset();
+  horiz_tracker.reset();
+  setup_chassis_odom();
+  chassis.odom_enable(true);
+
 }
 
 /**
@@ -117,9 +136,13 @@ void autonomous() {
   chassis.pid_targets_reset();                // Resets PID targets to 0
   chassis.drive_imu_reset();                  // Reset gyro position to 0
   chassis.drive_sensor_reset();               // Reset drive sensors to 0
+  //here read from GPS to localize cooordinates
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
   chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
-
+// drive_and_turn();
+// odom_drive_example();
+  // chassis.pid_odom_set(24_in, 100, true);
+  chassis.pid_drive_set(48_in, 100, false);
   /*
   Odometry and Pure Pursuit are not magic
 
@@ -133,7 +156,7 @@ void autonomous() {
   to be consistent
   */
 
-  ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
+  // ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
 }
 
 /**
@@ -208,12 +231,6 @@ void ez_template_extras() {
     if (master.get_digital_new_press(DIGITAL_X))
       chassis.pid_tuner_toggle();
 
-    // Trigger the selected autonomous routine
-    if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
-      pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-      autonomous();
-      chassis.drive_brake_set(preference);
-    }
 
     // Allow PID Tuner to iterate
     chassis.pid_tuner_iterate();
@@ -241,21 +258,30 @@ void ez_template_extras() {
  */
 void opcontrol() {
   // This is preference to what you like to drive on
-  chassis.drive_brake_set(MOTOR_BRAKE_COAST);
 
   while (true) {
     // Gives you some extras to make EZ-Template ezier
-    ez_template_extras();
+    // ez_template_extras();
 
-    chassis.opcontrol_tank();  // Tank control
-    // chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
+    chassis.opcontrol_arcade_standard(ez::SPLIT);
+   chassis.drive_brake_set(pros::E_MOTOR_BRAKE_HOLD);
+
+    // chassis.opcontrol_tank();  // Tank control
     // chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
     // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
     // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
-
     // . . .
-    // Put more user control code here!
-    // . . .
+    
+    // Trigger the selected autonomous routine
+    if (master.get_digital(DIGITAL_B)) {
+       chassis.pid_targets_reset();                // Resets PID targets to 0
+  chassis.drive_imu_reset();                  // Reset gyro position to 0
+  chassis.drive_sensor_reset();               // Reset drive sensors to 0
+  //here read from GPS to localize cooordinates
+  chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
+  chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
+     drive_example();
+    }
 
     pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
   }

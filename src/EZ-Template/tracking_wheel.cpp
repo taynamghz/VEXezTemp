@@ -13,7 +13,9 @@ using namespace ez;
 // ADI Encoder
 tracking_wheel::tracking_wheel(std::vector<int> ports, double wheel_diameter, double distance_to_center, double ratio)
     : adi_encoder(abs(ports[0]), abs(ports[1]), util::reversed_active(ports[0])),
-      smart_encoder(-1) {
+      smart_encoder(-1),
+      pot_sensor(-1)  // <-- initialize pot_sensor
+ {
   IS_TRACKER = DRIVE_ADI_ENCODER;
 
   distance_to_center_set(distance_to_center);
@@ -25,7 +27,9 @@ tracking_wheel::tracking_wheel(std::vector<int> ports, double wheel_diameter, do
 // ADI Encoder in 3-wire expander
 tracking_wheel::tracking_wheel(int smart_port, std::vector<int> ports, double wheel_diameter, double distance_to_center, double ratio)
     : adi_encoder({abs(smart_port), abs(ports[0]), abs(ports[1])}, util::reversed_active(ports[0])),
-      smart_encoder(-1) {
+      smart_encoder(-1),
+      pot_sensor(-1)  // <-- initialize pot_sensor
+ {
   IS_TRACKER = DRIVE_ADI_ENCODER;
 
   distance_to_center_set(distance_to_center);
@@ -33,18 +37,22 @@ tracking_wheel::tracking_wheel(int smart_port, std::vector<int> ports, double wh
   ratio_set(ratio);
   ticks_per_rev_set(360.0);
 }
-
-// Rotation Sensor
-tracking_wheel::tracking_wheel(int port, double wheel_diameter, double distance_to_center, double ratio)
+// Potentiometer constructor
+tracking_wheel::tracking_wheel(char port, double wheel_diameter, double distance_to_center, double ratio)
     : adi_encoder(-1, -1, false),
-      smart_encoder(abs(port)) {
-  IS_TRACKER = DRIVE_ROTATION;
-  smart_encoder.set_reversed(util::reversed_active(port));
+      smart_encoder(-1),
+      pot_sensor(port) {  // <-- create ADIAnalogIn for potentiometer
+  IS_TRACKER = DRIVE_POTENTIOMETER;
 
   distance_to_center_set(distance_to_center);
   wheel_diameter_set(wheel_diameter);
   ratio_set(ratio);
-  ticks_per_rev_set(36000.0);
+
+  // Pot has ~4095 steps over ~333 degrees
+  double pot_ticks_per_rev = 4096.0 * (360.0 / 333.0); 
+  ticks_per_rev_set(pot_ticks_per_rev);
+
+  pot_zero = pot_sensor.get_value(); // store starting offset
 }
 
 void tracking_wheel::ticks_per_rev_set(double input) { ENCODER_TICKS_PER_REV = fabs(input); }
@@ -73,6 +81,8 @@ double tracking_wheel::ticks_per_inch() {
 double tracking_wheel::get_raw() {
   if (IS_TRACKER == DRIVE_ROTATION) {
     return smart_encoder.get_position();
+  } else if (IS_TRACKER == DRIVE_POTENTIOMETER) {
+    return pot_sensor.get_value() - pot_zero; // relative value
   }
   return adi_encoder.get_value();
 }
@@ -83,13 +93,12 @@ double tracking_wheel::get() {
     return raw / tpi;
   return raw;
 }
-
 void tracking_wheel::reset() {
   if (IS_TRACKER == DRIVE_ADI_ENCODER) {
     adi_encoder.reset();
-    return;
   } else if (IS_TRACKER == DRIVE_ROTATION) {
     smart_encoder.reset_position();
-    return;
+  } else if (IS_TRACKER == DRIVE_POTENTIOMETER) {
+    pot_zero = pot_sensor.get_value(); // update zero
   }
 }

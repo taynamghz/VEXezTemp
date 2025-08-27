@@ -60,6 +60,11 @@ class tracking_wheel {
   tracking_wheel(int port, double wheel_diameter, double distance_to_center = 0.0, double ratio = 1.0);
 
   /**
+   * Creates a new tracking wheel with a Potentiometer (3-wire).
+   */
+  tracking_wheel(char port, double wheel_diameter, double distance_to_center = 0.0, double ratio = 1.0);
+
+  /**
    * Returns how far the wheel has traveled in inches.
    */
   double get();
@@ -149,6 +154,7 @@ class tracking_wheel {
  private:
 #define DRIVE_ADI_ENCODER 2
 #define DRIVE_ROTATION 3
+#define DRIVE_POTENTIOMETER 4   // 👈 add this
   int IS_TRACKER = 0;
 
   bool IS_FLIPPED = false;
@@ -158,5 +164,9 @@ class tracking_wheel {
   double RATIO = 1.0;
   double ENCODER_TICKS_PER_REV = 0.0;
   double WHEEL_TICK_PER_REV = 0.0;
+pros::ADIAnalogIn pot_sensor;  // give it the same name you use in cpp
+double pot_zero = 0;           // store starting offset
+
 };
+
 };  // namespace ez
